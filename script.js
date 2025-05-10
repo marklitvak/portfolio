@@ -50,10 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
 { thumb: 'images/thumbs/IMG_0506.jpg', full: 'images/IMG_0506.jpg', title: 'IMG_0506.jpg' },
 { thumb: 'images/thumbs/IMG_20250505_152743.jpg', full: 'images/IMG_20250505_152743.jpg', title: 'IMG_20250505_152743.jpg' },
 { thumb: 'images/thumbs/NotRoseMoon_A.jpg', full: 'images/NotRoseMoon_A.jpg', title: 'NotRoseMoon_A.jpg' },
-{ thumb: 'images/thumbs/parcer.py', full: 'images/parcer.py', title: 'parcer.py' },
 { thumb: 'images/thumbs/stripes.jpg', full: 'images/stripes.jpg', title: 'stripes.jpg' },
-{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' },
-{ thumb: 'images/thumbs/thumb_creator.py', full: 'images/thumb_creator.py', title: 'thumb_creator.py' }];
+{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' }];
 
     // Zoom and pan variables
     let scale = 1;
