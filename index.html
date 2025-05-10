@@ -156,90 +156,44 @@
     </div>
     
     <script>
-        // Configuration - Replace with your Google Apps Script Web App URL
-        const DRIVE_API_URL = 'https://script.google.com/macros/s/AKfycbwcPWq0SnI7anUyMGBlvui-T2ZX-PCITrZv4PhadTdVm4gHsZZzL2NvgiZCMuxWy_p9/exec';
-        
-        // Load photos from Google Drive
+        // Updated image loading with error handling
         async function loadPhotos() {
             try {
-                const response = await fetch(DRIVE_API_URL);
+                const response = await fetch('https://drive.google.com/drive/folders/1CnY1yvKXX9LQf9fytznuKyAS-FiD9BMT?usp=drive_link');
+                if (!response.ok) throw new Error('Network response was not ok');
+                
                 const photos = await response.json();
-                
                 const gallery = document.getElementById('gallery');
-                gallery.innerHTML = '';
                 
-                photos.forEach(photo => {
-                    const photoElement = document.createElement('div');
-                    photoElement.className = 'photo';
-                    
-                    // Create thumbnail image (low resolution)
-                    const img = document.createElement('img');
-                    img.src = getThumbnailUrl(photo.url);
-                    img.alt = photo.name;
-                    img.loading = 'lazy';
-                    img.dataset.fullres = photo.url; // Store full-res URL
-                    
-                    // Add click event for lightbox
-                    photoElement.addEventListener('click', () => showLightbox(photo.url));
-                    
-                    photoElement.appendChild(img);
-                    gallery.appendChild(photoElement);
-                });
+                if (!photos.length) {
+                    gallery.innerHTML = '<p>No photos found in the specified folder.</p>';
+                    return;
+                }
                 
-                document.querySelector('.loading').style.display = 'none';
+                gallery.innerHTML = photos.map(photo => `
+                    <div class="photo" onclick="showLightbox('${photo.url}')">
+                        <img src="${photo.thumbnail}" 
+                             alt="${photo.name}" 
+                             loading="lazy"
+                             onerror="this.onerror=null;this.src='placeholder.jpg'">
+                    </div>
+                `).join('');
                 
-                console.log('Photos loaded successfully:', photos.length);
             } catch (error) {
-                console.error('Error loading photos:', error);
+                console.error('Error:', error);
+                document.getElementById('gallery').innerHTML = `
+                    <p>Error loading photos. Please check:</p>
+                    <ul>
+                        <li>Google Drive folder is shared publicly</li>
+                        <li>Web app URL is correct</li>
+                        <li>Folder contains image files</li>
+                    </ul>
+                `;
+            } finally {
                 document.querySelector('.loading').style.display = 'none';
-                document.getElementById('gallery').innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px;">Error loading photos. Please try again later.</p>';
             }
         }
         
-        // Generate thumbnail URL from full-res URL
-        function getThumbnailUrl(url) {
-            // For Google Drive URLs, we can add parameters to get smaller versions
-            if (url.includes('google.com/uc')) {
-                return `${url}&w=400`; // Request 400px width thumbnail
-            }
-            // For other URLs, you might need a different approach
-            return url;
-        }
-        
-        // Lightbox functions
-        function showLightbox(fullResUrl) {
-            const lightbox = document.getElementById('lightbox');
-            const lightboxImg = document.getElementById('lightbox-image');
-            const loadingText = document.querySelector('.lightbox-loading');
-            
-            lightbox.classList.add('active');
-            lightboxImg.style.display = 'none';
-            loadingText.style.display = 'block';
-            
-            // Load full resolution image
-            lightboxImg.onload = function() {
-                loadingText.style.display = 'none';
-                lightboxImg.style.display = 'block';
-            };
-            
-            lightboxImg.src = fullResUrl;
-        }
-        
-        function hideLightbox() {
-            document.getElementById('lightbox').classList.remove('active');
-        }
-        
-        // Close lightbox when clicking X or backdrop
-        document.querySelector('.lightbox-close').addEventListener('click', hideLightbox);
-        document.getElementById('lightbox').addEventListener('click', function(e) {
-            if (e.target === this) hideLightbox();
-        });
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', loadPhotos);
-        
-        // Optional: Refresh every hour to get new photos
-        setInterval(loadPhotos, 3600000);
     </script>
 </body>
 </html>
