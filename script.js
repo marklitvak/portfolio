@@ -1,13 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const portfolioContainer = document.getElementById('portfolioContainer');
     const modal = document.getElementById('imageModal');
-    const imageContainer = document.getElementById('imageContainer');
-    const modalImg = document.getElementById('fullImage');
+    const modalContent = document.getElementById('fullImage');
     const closeBtn = document.querySelector('.close');
     const zoomInBtn = document.getElementById('zoomIn');
     const zoomOutBtn = document.getElementById('zoomOut');
     const resetZoomBtn = document.getElementById('resetZoom');
-    
+
     // Image data - replace with your actual images
     const imageFiles = [
         { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
@@ -57,8 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 { thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' },
 { thumb: 'images/thumbs/thumb_creator.py', full: 'images/thumb_creator.py', title: 'thumb_creator.py' }
     ];
-    ];
-    
+
     // Zoom and pan variables
     let scale = 1;
     let posX = 0;
@@ -66,10 +64,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let isDragging = false;
     let startX, startY, initialX, initialY;
     let initialDistance = null;
-    
+    let lastTouchTime = 0;
+
     // Create thumbnails
     function createThumbnails() {
-        imageFiles.forEach((image, index) => {
+        imageFiles.forEach((image) => {
             const thumbnail = document.createElement('div');
             thumbnail.className = 'thumbnail';
             
@@ -89,31 +88,35 @@ document.addEventListener('DOMContentLoaded', function() {
             portfolioContainer.appendChild(thumbnail);
         });
     }
-    
+
     // Open modal with image
     function openModal(src, title) {
         resetZoom();
         modal.style.display = 'block';
-        modalImg.src = src;
-        modalImg.alt = title;
+        modalContent.src = src;
+        modalContent.alt = title;
         
         // Wait for image to load before positioning
-        modalImg.onload = function() {
+        if (modalContent.complete) {
             centerImage();
-        };
+        } else {
+            modalContent.onload = centerImage;
+        }
     }
-    
+
     // Center image in view
     function centerImage() {
-        const containerWidth = imageContainer.clientWidth;
-        const containerHeight = imageContainer.clientHeight;
-        const imgWidth = modalImg.naturalWidth;
-        const imgHeight = modalImg.naturalHeight;
+        const containerWidth = modal.clientWidth;
+        const containerHeight = modal.clientHeight;
+        const imgWidth = modalContent.naturalWidth;
+        const imgHeight = modalContent.naturalHeight;
         
         // Calculate initial scale to fit image to container
-        const scaleX = containerWidth / imgWidth;
-        const scaleY = containerHeight / imgHeight;
-        scale = Math.min(scaleX, scaleY, 1); // Never scale up beyond 1 initially
+        scale = Math.min(
+            containerWidth / imgWidth,
+            containerHeight / imgHeight,
+            1 // Don't scale up beyond 100%
+        );
         
         // Center the image
         posX = (containerWidth - imgWidth * scale) / 2;
@@ -121,12 +124,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         updateTransform();
     }
-    
+
     // Update image transform
     function updateTransform() {
-        modalImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        modalContent.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
     }
-    
+
     // Reset zoom and position
     function resetZoom() {
         scale = 1;
@@ -135,37 +138,43 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTransform();
         centerImage();
     }
-    
-    // Zoom in/out functions
-    function zoomIn() {
+
+    // Zoom functions with center point preservation
+    function zoom(zoomFactor, clientX, clientY) {
         const prevScale = scale;
-        scale *= 1.2;
+        scale *= zoomFactor;
         
-        // Adjust position to zoom toward center
-        const containerWidth = imageContainer.clientWidth;
-        const containerHeight = imageContainer.clientHeight;
-        posX = posX - (containerWidth/2 - posX) * (1.2 - 1);
-        posY = posY - (containerHeight/2 - posY) * (1.2 - 1);
+        // Limit scale
+        scale = Math.max(0.1, Math.min(scale, 10));
+        
+        // Calculate mouse position relative to image
+        const imgRect = modalContent.getBoundingClientRect();
+        const relativeX = clientX - imgRect.left;
+        const relativeY = clientY - imgRect.top;
+        
+        // Adjust position to zoom toward the point
+        posX = clientX - (clientX - posX) * (scale / prevScale);
+        posY = clientY - (clientY - posY) * (scale / prevScale);
         
         updateTransform();
     }
-    
-    function zoomOut() {
-        const prevScale = scale;
-        scale /= 1.2;
-        if (scale < 0.1) scale = 0.1;
-        
-        // Adjust position to zoom toward center
-        const containerWidth = imageContainer.clientWidth;
-        const containerHeight = imageContainer.clientHeight;
-        posX = posX - (containerWidth/2 - posX) * (1/1.2 - 1);
-        posY = posY - (containerHeight/2 - posY) * (1/1.2 - 1);
-        
-        updateTransform();
-    }
-    
-    // Mouse event handlers for dragging
-    imageContainer.addEventListener('mousedown', (e) => {
+
+    // Button event handlers
+    zoomInBtn.addEventListener('click', (e) => {
+        const rect = modal.getBoundingClientRect();
+        zoom(1.2, rect.left + rect.width/2, rect.top + rect.height/2);
+    });
+
+    zoomOutBtn.addEventListener('click', (e) => {
+        const rect = modal.getBoundingClientRect();
+        zoom(1/1.2, rect.left + rect.width/2, rect.top + rect.height/2);
+    });
+
+    resetZoomBtn.addEventListener('click', resetZoom);
+    closeBtn.addEventListener('click', () => modal.style.display = 'none');
+
+    // Mouse event handlers
+    modalContent.addEventListener('mousedown', (e) => {
         if (scale <= 1) return;
         
         isDragging = true;
@@ -173,10 +182,10 @@ document.addEventListener('DOMContentLoaded', function() {
         startY = e.clientY;
         initialX = posX;
         initialY = posY;
-        imageContainer.style.cursor = 'grabbing';
+        modalContent.style.cursor = 'grabbing';
         e.preventDefault();
     });
-    
+
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
@@ -189,16 +198,23 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTransform();
         e.preventDefault();
     });
-    
+
     window.addEventListener('mouseup', () => {
         isDragging = false;
-        imageContainer.style.cursor = 'grab';
+        modalContent.style.cursor = 'grab';
     });
-    
+
     // Touch event handlers
-    imageContainer.addEventListener('touchstart', (e) => {
+    modalContent.addEventListener('touchstart', (e) => {
+        const now = Date.now();
+        if (now - lastTouchTime < 300) { // Double-tap detection
+            resetZoom();
+            e.preventDefault();
+            return;
+        }
+        lastTouchTime = now;
+
         if (e.touches.length === 1) {
-            // Single touch - pan
             if (scale <= 1) return;
             
             isDragging = true;
@@ -208,7 +224,6 @@ document.addEventListener('DOMContentLoaded', function() {
             initialY = posY;
             e.preventDefault();
         } else if (e.touches.length === 2) {
-            // Two touches - pinch zoom
             initialDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
@@ -216,10 +231,9 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         }
     });
-    
+
     window.addEventListener('touchmove', (e) => {
         if (e.touches.length === 1 && isDragging) {
-            // Single touch - pan
             const dx = e.touches[0].clientX - startX;
             const dy = e.touches[0].clientY - startY;
             
@@ -229,47 +243,36 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTransform();
             e.preventDefault();
         } else if (e.touches.length === 2) {
-            // Two touches - pinch zoom
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
             const currentDistance = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
+                touch1.clientX - touch2.clientX,
+                touch1.clientY - touch2.clientY
             );
             
             if (initialDistance) {
-                const newScale = scale * (currentDistance / initialDistance);
-                if (newScale > 0.1 && newScale < 10) {
-                    scale = newScale;
-                    updateTransform();
-                }
+                const centerX = (touch1.clientX + touch2.clientX) / 2;
+                const centerY = (touch1.clientY + touch2.clientY) / 2;
+                zoom(currentDistance / initialDistance, centerX, centerY);
             }
             initialDistance = currentDistance;
             e.preventDefault();
         }
     });
-    
+
     window.addEventListener('touchend', () => {
         isDragging = false;
         initialDistance = null;
     });
-    
-    // Button event listeners
-    zoomInBtn.addEventListener('click', zoomIn);
-    zoomOutBtn.addEventListener('click', zoomOut);
-    resetZoomBtn.addEventListener('click', resetZoom);
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
+
+    // Prevent modal close when interacting with image
+    modalContent.addEventListener('click', (e) => {
+        e.stopPropagation();
     });
-    
-    // Close modal when clicking outside image
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-    
-    // Initialize cursor style
-    imageContainer.style.cursor = 'grab';
-    
-    // Initialize the portfolio
+
+    // Initialize cursor
+    modalContent.style.cursor = 'grab';
+
+    // Create the portfolio
     createThumbnails();
 });
