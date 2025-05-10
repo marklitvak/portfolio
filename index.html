@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Portfolio</title>
+    <title>Advanced Portfolio Viewer</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,10 +13,8 @@
         
         body {
             font-family: 'Arial', sans-serif;
-            line-height: 1.6;
             background-color: #f5f5f5;
             padding: 20px;
-            touch-action: none;
         }
         
         header {
@@ -92,7 +90,7 @@
         .modal-content-container {
             position: absolute;
             width: 100%;
-            height: 100%;
+            height: calc(100% - 120px);
             overflow: hidden;
         }
         
@@ -101,6 +99,11 @@
             transform-origin: 0 0;
             transition: transform 0.1s ease-out;
             max-width: none;
+            cursor: grab;
+        }
+        
+        .modal-content.grabbing {
+            cursor: grabbing;
         }
         
         .close {
@@ -114,15 +117,24 @@
             z-index: 1001;
         }
         
-        .controls {
+        /* Control panel */
+        .control-panel {
             position: absolute;
-            bottom: 20px;
+            bottom: 0;
             left: 0;
             right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1001;
+        }
+        
+        .zoom-controls {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            z-index: 1001;
+            gap: 15px;
         }
         
         .control-btn {
@@ -143,13 +155,61 @@
             background-color: rgba(255, 255, 255, 0.5);
         }
         
+        /* Dual slider controls */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .slider-label {
+            color: white;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .slider {
+            flex-grow: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .horizontal-slider {
+            width: 100%;
+        }
+        
+        .vertical-slider {
+            width: 6px;
+            height: 150px;
+            writing-mode: bt-lr;
+        }
+        
         @media (max-width: 768px) {
             .portfolio-grid {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-            
-            .controls {
-                gap: 10px;
             }
             
             .control-btn {
@@ -157,32 +217,409 @@
                 height: 35px;
                 font-size: 16px;
             }
+            
+            .modal-content-container {
+                height: calc(100% - 180px);
+            }
+            
+            .control-panel {
+                padding: 10px;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>My Photography Portfolio</h1>
-        <p>Click on any image to view full resolution</p>
+        <h1>Advanced Photo Portfolio</h1>
+        <p>Click on any image to view with enhanced controls</p>
     </header>
     
     <main class="portfolio-grid" id="portfolioContainer">
         <!-- Thumbnails will be dynamically inserted here -->
     </main>
     
-    <!-- Full image modal with zoom/pan capabilities -->
+    <!-- Full image modal with advanced controls -->
     <div class="modal" id="imageModal">
         <span class="close">&times;</span>
         <div class="modal-content-container" id="imageContainer">
             <img class="modal-content" id="fullImage">
         </div>
-        <div class="controls">
-            <button class="control-btn" id="zoomIn">+</button>
-            <button class="control-btn" id="zoomOut">-</button>
-            <button class="control-btn" id="resetZoom">↻</button>
+        <div class="control-panel">
+            <div class="zoom-controls">
+                <button class="control-btn" id="zoomIn">+</button>
+                <button class="control-btn" id="zoomOut">-</button>
+                <button class="control-btn" id="resetZoom">↻</button>
+            </div>
+            
+            <div class="slider-container">
+                <span class="slider-label">X</span>
+                <input type="range" class="slider horizontal-slider" id="panX" min="-100" max="100" value="0">
+            </div>
+            
+            <div class="slider-container">
+                <span class="slider-label">Y</span>
+                <input type="range" class="slider horizontal-slider" id="panY" min="-100" max="100" value="0">
+            </div>
+            
+            <div class="slider-container" style="justify-content: center;">
+                <input type="range" class="slider vertical-slider" id="zoomSlider" min="10" max="500" value="100">
+            </div>
         </div>
     </div>
     
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const portfolioContainer = document.getElementById('portfolioContainer');
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('fullImage');
+            const imageContainer = document.getElementById('imageContainer');
+            const closeBtn = document.querySelector('.close');
+            const zoomInBtn = document.getElementById('zoomIn');
+            const zoomOutBtn = document.getElementById('zoomOut');
+            const resetZoomBtn = document.getElementById('resetZoom');
+            const panXSlider = document.getElementById('panX');
+            const panYSlider = document.getElementById('panY');
+            const zoomSlider = document.getElementById('zoomSlider');
+
+            // Sample image data
+            const imageFiles = [
+                { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
+{ thumb: 'images/thumbs/1304_Edge.JPG', full: 'images/1304_Edge.JPG', title: '1304_Edge.JPG' },
+{ thumb: 'images/thumbs/1304_Gentletouch.JPG', full: 'images/1304_Gentletouch.JPG', title: '1304_Gentletouch.JPG' },
+{ thumb: 'images/thumbs/1304_Overdrive.JPG', full: 'images/1304_Overdrive.JPG', title: '1304_Overdrive.JPG' },
+{ thumb: 'images/thumbs/1304_Skynet.JPG', full: 'images/1304_Skynet.JPG', title: '1304_Skynet.JPG' },
+{ thumb: 'images/thumbs/blue_window.jpg', full: 'images/blue_window.jpg', title: 'blue_window.jpg' },
+{ thumb: 'images/thumbs/bottle.jpg', full: 'images/bottle.jpg', title: 'bottle.jpg' },
+{ thumb: 'images/thumbs/guard1.jpg', full: 'images/guard1.jpg', title: 'guard1.jpg' },
+{ thumb: 'images/thumbs/guard2.jpg', full: 'images/guard2.jpg', title: 'guard2.jpg' },
+{ thumb: 'images/thumbs/guard3.jpg', full: 'images/guard3.jpg', title: 'guard3.jpg' },
+{ thumb: 'images/thumbs/IMG_0021.jpg', full: 'images/IMG_0021.jpg', title: 'IMG_0021.jpg' },
+{ thumb: 'images/thumbs/IMG_0022.jpg', full: 'images/IMG_0022.jpg', title: 'IMG_0022.jpg' },
+{ thumb: 'images/thumbs/IMG_0023.JPG', full: 'images/IMG_0023.JPG', title: 'IMG_0023.JPG' },
+{ thumb: 'images/thumbs/IMG_0109_full.jpg', full: 'images/IMG_0109_full.jpg', title: 'IMG_0109_full.jpg' },
+{ thumb: 'images/thumbs/IMG_0110.jpg', full: 'images/IMG_0110.jpg', title: 'IMG_0110.jpg' },
+{ thumb: 'images/thumbs/IMG_0116.jpg', full: 'images/IMG_0116.jpg', title: 'IMG_0116.jpg' },
+{ thumb: 'images/thumbs/IMG_0143.jpg', full: 'images/IMG_0143.jpg', title: 'IMG_0143.jpg' },
+{ thumb: 'images/thumbs/IMG_0146.JPG', full: 'images/IMG_0146.JPG', title: 'IMG_0146.JPG' },
+{ thumb: 'images/thumbs/IMG_0150.JPG', full: 'images/IMG_0150.JPG', title: 'IMG_0150.JPG' },
+{ thumb: 'images/thumbs/IMG_0155.JPG', full: 'images/IMG_0155.JPG', title: 'IMG_0155.JPG' },
+{ thumb: 'images/thumbs/IMG_0175.jpg', full: 'images/IMG_0175.jpg', title: 'IMG_0175.jpg' },
+{ thumb: 'images/thumbs/IMG_0176.JPG', full: 'images/IMG_0176.JPG', title: 'IMG_0176.JPG' },
+{ thumb: 'images/thumbs/IMG_0187.JPG', full: 'images/IMG_0187.JPG', title: 'IMG_0187.JPG' },
+{ thumb: 'images/thumbs/IMG_0200.JPG', full: 'images/IMG_0200.JPG', title: 'IMG_0200.JPG' },
+{ thumb: 'images/thumbs/IMG_0231 - Copy.JPG', full: 'images/IMG_0231 - Copy.JPG', title: 'IMG_0231 - Copy.JPG' },
+{ thumb: 'images/thumbs/IMG_0233.jpg', full: 'images/IMG_0233.jpg', title: 'IMG_0233.jpg' },
+{ thumb: 'images/thumbs/IMG_0234.JPG', full: 'images/IMG_0234.JPG', title: 'IMG_0234.JPG' },
+{ thumb: 'images/thumbs/IMG_0244.JPG', full: 'images/IMG_0244.JPG', title: 'IMG_0244.JPG' },
+{ thumb: 'images/thumbs/IMG_0245.jpg', full: 'images/IMG_0245.jpg', title: 'IMG_0245.jpg' },
+{ thumb: 'images/thumbs/IMG_0251.JPG', full: 'images/IMG_0251.JPG', title: 'IMG_0251.JPG' },
+{ thumb: 'images/thumbs/IMG_0257.jpg', full: 'images/IMG_0257.jpg', title: 'IMG_0257.jpg' },
+{ thumb: 'images/thumbs/IMG_0271.JPG', full: 'images/IMG_0271.JPG', title: 'IMG_0271.JPG' },
+{ thumb: 'images/thumbs/IMG_0350_final.jpg', full: 'images/IMG_0350_final.jpg', title: 'IMG_0350_final.jpg' },
+{ thumb: 'images/thumbs/IMG_0448.jpg', full: 'images/IMG_0448.jpg', title: 'IMG_0448.jpg' },
+{ thumb: 'images/thumbs/IMG_0462.jpg', full: 'images/IMG_0462.jpg', title: 'IMG_0462.jpg' },
+{ thumb: 'images/thumbs/IMG_0482.jpg', full: 'images/IMG_0482.jpg', title: 'IMG_0482.jpg' },
+{ thumb: 'images/thumbs/IMG_0488.jpg', full: 'images/IMG_0488.jpg', title: 'IMG_0488.jpg' },
+{ thumb: 'images/thumbs/IMG_0496.jpg', full: 'images/IMG_0496.jpg', title: 'IMG_0496.jpg' },
+{ thumb: 'images/thumbs/IMG_0498.jpg', full: 'images/IMG_0498.jpg', title: 'IMG_0498.jpg' },
+{ thumb: 'images/thumbs/IMG_0506.jpg', full: 'images/IMG_0506.jpg', title: 'IMG_0506.jpg' },
+{ thumb: 'images/thumbs/IMG_20250505_152743.jpg', full: 'images/IMG_20250505_152743.jpg', title: 'IMG_20250505_152743.jpg' },
+{ thumb: 'images/thumbs/NotRoseMoon_A.jpg', full: 'images/NotRoseMoon_A.jpg', title: 'NotRoseMoon_A.jpg' },
+{ thumb: 'images/thumbs/stripes.jpg', full: 'images/stripes.jpg', title: 'stripes.jpg' },
+{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' },
+
+            ];
+
+            // Transformation state
+            const state = {
+                scale: 1,
+                translateX: 0,
+                translateY: 0,
+                minScale: 0.1,
+                maxScale: 5,
+                isDragging: false,
+                startX: 0,
+                startY: 0,
+                initialX: 0,
+                initialY: 0,
+                maxPanX: 0,
+                maxPanY: 0
+            };
+
+            // Create thumbnails
+            function createThumbnails() {
+                imageFiles.forEach(image => {
+                    const thumbnail = document.createElement('div');
+                    thumbnail.className = 'thumbnail';
+                    
+                    const img = document.createElement('img');
+                    img.src = image.thumb;
+                    img.alt = image.title;
+                    
+                    const overlay = document.createElement('div');
+                    overlay.className = 'overlay';
+                    overlay.textContent = image.title;
+                    
+                    thumbnail.appendChild(img);
+                    thumbnail.appendChild(overlay);
+                    
+                    thumbnail.addEventListener('click', () => openModal(image.full, image.title));
+                    
+                    portfolioContainer.appendChild(thumbnail);
+                });
+            }
+
+            // Open modal with image
+            function openModal(src, title) {
+                resetTransform();
+                modal.style.display = 'block';
+                modalImg.src = src;
+                modalImg.alt = title;
+                
+                modalImg.onload = function() {
+                    centerImage();
+                    updateSliders();
+                };
+            }
+
+            // Center image in viewport
+            function centerImage() {
+                const containerWidth = imageContainer.clientWidth;
+                const containerHeight = imageContainer.clientHeight;
+                const imgWidth = modalImg.naturalWidth;
+                const imgHeight = modalImg.naturalHeight;
+                
+                // Calculate initial scale to fit image
+                const scaleX = containerWidth / imgWidth;
+                const scaleY = containerHeight / imgHeight;
+                state.scale = Math.min(scaleX, scaleY, 1);
+                
+                // Calculate maximum pan values
+                state.maxPanX = Math.max(0, (imgWidth * state.scale - containerWidth) / 2);
+                state.maxPanY = Math.max(0, (imgHeight * state.scale - containerHeight) / 2);
+                
+                // Center the image
+                state.translateX = (containerWidth - imgWidth * state.scale) / 2;
+                state.translateY = (containerHeight - imgHeight * state.scale) / 2;
+                
+                updateTransform();
+                updateSliders();
+            }
+
+            // Update CSS transform
+            function updateTransform() {
+                modalImg.style.transform = `
+                    translate(${state.translateX}px, ${state.translateY}px)
+                    scale(${state.scale})
+                `;
+            }
+
+            // Update slider positions
+            function updateSliders() {
+                if (state.maxPanX > 0) {
+                    panXSlider.value = ((state.translateX - (imageContainer.clientWidth - modalImg.naturalWidth * state.scale) / 2) / state.maxPanX) * 100;
+                } else {
+                    panXSlider.value = 0;
+                }
+                
+                if (state.maxPanY > 0) {
+                    panYSlider.value = ((state.translateY - (imageContainer.clientHeight - modalImg.naturalHeight * state.scale) / 2) / state.maxPanY) * 100;
+                } else {
+                    panYSlider.value = 0;
+                }
+                
+                zoomSlider.value = ((state.scale - state.minScale) / (state.maxScale - state.minScale)) * 100;
+            }
+
+            // Reset all transformations
+            function resetTransform() {
+                state.scale = 1;
+                state.translateX = 0;
+                state.translateY = 0;
+                updateTransform();
+                centerImage();
+            }
+
+            // Zoom functions
+            function zoom(zoomFactor, centerX, centerY) {
+                const prevScale = state.scale;
+                state.scale *= zoomFactor;
+                state.scale = Math.max(state.minScale, Math.min(state.scale, state.maxScale));
+                
+                // Calculate maximum pan values
+                const containerWidth = imageContainer.clientWidth;
+                const containerHeight = imageContainer.clientHeight;
+                state.maxPanX = Math.max(0, (modalImg.naturalWidth * state.scale - containerWidth) / 2);
+                state.maxPanY = Math.max(0, (modalImg.naturalHeight * state.scale - containerHeight) / 2);
+                
+                // Adjust position to zoom toward the point
+                if (centerX && centerY) {
+                    const containerRect = imageContainer.getBoundingClientRect();
+                    const relativeX = centerX - containerRect.left;
+                    const relativeY = centerY - containerRect.top;
+                    
+                    state.translateX = relativeX - (relativeX - state.translateX) * (state.scale / prevScale);
+                    state.translateY = relativeY - (relativeY - state.translateY) * (state.scale / prevScale);
+                }
+                
+                // Constrain to boundaries
+                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2;
+                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2;
+                
+                state.translateX = Math.max(minX - state.maxPanX, Math.min(minX + state.maxPanX, state.translateX));
+                state.translateY = Math.max(minY - state.maxPanY, Math.min(minY + state.maxPanY, state.translateY));
+                
+                updateTransform();
+                updateSliders();
+            }
+
+            // Pan functions
+            function pan(deltaX, deltaY) {
+                const containerWidth = imageContainer.clientWidth;
+                const containerHeight = imageContainer.clientHeight;
+                
+                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2 - state.maxPanX;
+                const maxX = (containerWidth - modalImg.naturalWidth * state.scale) / 2 + state.maxPanX;
+                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2 - state.maxPanY;
+                const maxY = (containerHeight - modalImg.naturalHeight * state.scale) / 2 + state.maxPanY;
+                
+                state.translateX = Math.max(minX, Math.min(maxX, state.translateX + deltaX));
+                state.translateY = Math.max(minY, Math.min(maxY, state.translateY + deltaY));
+                
+                updateTransform();
+                updateSliders();
+            }
+
+            // Mouse event handlers
+            modalImg.addEventListener('mousedown', (e) => {
+                if (state.scale <= 1) return;
+                
+                state.isDragging = true;
+                state.startX = e.clientX;
+                state.startY = e.clientY;
+                state.initialX = state.translateX;
+                state.initialY = state.translateY;
+                modalImg.classList.add('grabbing');
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!state.isDragging) return;
+                
+                const dx = e.clientX - state.startX;
+                const dy = e.clientY - state.startY;
+                
+                pan(dx, dy);
+                state.startX = e.clientX;
+                state.startY = e.clientY;
+                e.preventDefault();
+            });
+
+            window.addEventListener('mouseup', () => {
+                state.isDragging = false;
+                modalImg.classList.remove('grabbing');
+            });
+
+            // Touch event handlers
+            modalImg.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1 && state.scale > 1) {
+                    state.isDragging = true;
+                    state.startX = e.touches[0].clientX;
+                    state.startY = e.touches[0].clientY;
+                    state.initialX = state.translateX;
+                    state.initialY = state.translateY;
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (state.isDragging && e.touches.length === 1) {
+                    const dx = e.touches[0].clientX - state.startX;
+                    const dy = e.touches[0].clientY - state.startY;
+                    
+                    pan(dx, dy);
+                    state.startX = e.touches[0].clientX;
+                    state.startY = e.touches[0].clientY;
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('touchend', () => {
+                state.isDragging = false;
+            });
+
+            // Wheel zoom
+            imageContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const rect = imageContainer.getBoundingClientRect();
+                const centerX = e.clientX - rect.left;
+                const centerY = e.clientY - rect.top;
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                zoom(zoomFactor, centerX + rect.left, centerY + rect.top);
+            });
+
+            // Control button handlers
+            zoomInBtn.addEventListener('click', () => {
+                const rect = imageContainer.getBoundingClientRect();
+                zoom(1.2, rect.left + rect.width/2, rect.top + rect.height/2);
+            });
+
+            zoomOutBtn.addEventListener('click', () => {
+                const rect = imageContainer.getBoundingClientRect();
+                zoom(1/1.2, rect.left + rect.width/2, rect.top + rect.height/2);
+            });
+
+            resetZoomBtn.addEventListener('click', resetTransform);
+            closeBtn.addEventListener('click', () => modal.style.display = 'none');
+
+            // Slider handlers
+            panXSlider.addEventListener('input', (e) => {
+                const containerWidth = imageContainer.clientWidth;
+                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2;
+                state.translateX = minX + (e.target.value / 100) * state.maxPanX;
+                updateTransform();
+            });
+
+            panYSlider.addEventListener('input', (e) => {
+                const containerHeight = imageContainer.clientHeight;
+                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2;
+                state.translateY = minY + (e.target.value / 100) * state.maxPanY;
+                updateTransform();
+            });
+
+            zoomSlider.addEventListener('input', (e) => {
+                state.scale = state.minScale + (e.target.value / 100) * (state.maxScale - state.minScale);
+                
+                // Calculate maximum pan values
+                const containerWidth = imageContainer.clientWidth;
+                const containerHeight = imageContainer.clientHeight;
+                state.maxPanX = Math.max(0, (modalImg.naturalWidth * state.scale - containerWidth) / 2);
+                state.maxPanY = Math.max(0, (modalImg.naturalHeight * state.scale - containerHeight) / 2);
+                
+                // Keep current pan percentage
+                const currentPanX = panXSlider.value;
+                const currentPanY = panYSlider.value;
+                
+                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2;
+                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2;
+                
+                state.translateX = minX + (currentPanX / 100) * state.maxPanX;
+                state.translateY = minY + (currentPanY / 100) * state.maxPanY;
+                
+                updateTransform();
+            });
+
+            // Prevent modal close when interacting with image
+            modalImg.addEventListener('click', (e) => e.stopPropagation());
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            });
+
+            // Initialize
+            createThumbnails();
+        });
+    </script>
 </body>
 </html>
