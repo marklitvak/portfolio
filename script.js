@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetZoomBtn = document.getElementById('resetZoom');
 
     // Image data - replace with your actual images
-    const imageFiles = [{ thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
+    const imageFiles = [
+        { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
 { thumb: 'images/thumbs/1304_Edge.JPG', full: 'images/1304_Edge.JPG', title: '1304_Edge.JPG' },
 { thumb: 'images/thumbs/1304_Gentletouch.JPG', full: 'images/1304_Gentletouch.JPG', title: '1304_Gentletouch.JPG' },
 { thumb: 'images/thumbs/1304_Overdrive.JPG', full: 'images/1304_Overdrive.JPG', title: '1304_Overdrive.JPG' },
@@ -51,7 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
 { thumb: 'images/thumbs/IMG_20250505_152743.jpg', full: 'images/IMG_20250505_152743.jpg', title: 'IMG_20250505_152743.jpg' },
 { thumb: 'images/thumbs/NotRoseMoon_A.jpg', full: 'images/NotRoseMoon_A.jpg', title: 'NotRoseMoon_A.jpg' },
 { thumb: 'images/thumbs/stripes.jpg', full: 'images/stripes.jpg', title: 'stripes.jpg' },
-{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' }];
+{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' }
+
+    ];
 
     // Zoom and pan variables
     let scale = 1;
@@ -61,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let startX, startY, initialX, initialY;
     let initialDistance = null;
     let lastTouchTime = 0;
+    let mouseX = 0, mouseY = 0;
 
     // Create thumbnails
     function createThumbnails() {
@@ -92,7 +96,6 @@ document.addEventListener('DOMContentLoaded', function() {
         modalContent.src = src;
         modalContent.alt = title;
         
-        // Wait for image to load before positioning
         if (modalContent.complete) {
             centerImage();
         } else {
@@ -107,14 +110,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const imgWidth = modalContent.naturalWidth;
         const imgHeight = modalContent.naturalHeight;
         
-        // Calculate initial scale to fit image to container
         scale = Math.min(
             containerWidth / imgWidth,
             containerHeight / imgHeight,
-            1 // Don't scale up beyond 100%
+            1
         );
         
-        // Center the image
         posX = (containerWidth - imgWidth * scale) / 2;
         posY = (containerHeight - imgHeight * scale) / 2;
         
@@ -143,11 +144,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Limit scale
         scale = Math.max(0.1, Math.min(scale, 10));
         
-        // Calculate mouse position relative to image
-        const imgRect = modalContent.getBoundingClientRect();
-        const relativeX = clientX - imgRect.left;
-        const relativeY = clientY - imgRect.top;
-        
         // Adjust position to zoom toward the point
         posX = clientX - (clientX - posX) * (scale / prevScale);
         posY = clientY - (clientY - posY) * (scale / prevScale);
@@ -155,17 +151,22 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTransform();
     }
 
+    // Track mouse position
+    modal.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    });
+
+    // Mouse wheel zoom
+    modal.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        zoom(zoomFactor, mouseX, mouseY);
+    });
+
     // Button event handlers
-    zoomInBtn.addEventListener('click', (e) => {
-        const rect = modal.getBoundingClientRect();
-        zoom(1.2, rect.left + rect.width/2, rect.top + rect.height/2);
-    });
-
-    zoomOutBtn.addEventListener('click', (e) => {
-        const rect = modal.getBoundingClientRect();
-        zoom(1/1.2, rect.left + rect.width/2, rect.top + rect.height/2);
-    });
-
+    zoomInBtn.addEventListener('click', () => zoom(1.2, mouseX, mouseY));
+    zoomOutBtn.addEventListener('click', () => zoom(1/1.2, mouseX, mouseY));
     resetZoomBtn.addEventListener('click', resetZoom);
     closeBtn.addEventListener('click', () => modal.style.display = 'none');
 
@@ -203,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Touch event handlers
     modalContent.addEventListener('touchstart', (e) => {
         const now = Date.now();
-        if (now - lastTouchTime < 300) { // Double-tap detection
+        if (now - lastTouchTime < 300) {
             resetZoom();
             e.preventDefault();
             return;
