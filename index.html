@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Portfolio Viewer</title>
+    <title>Clean Photo Viewer</title>
     <style>
         * {
             box-sizing: border-box;
@@ -90,15 +90,18 @@
         .modal-content-container {
             position: absolute;
             width: 100%;
-            height: calc(100% - 120px);
+            height: 100%;
             overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .modal-content {
-            position: absolute;
-            transform-origin: 0 0;
+            transform-origin: center center;
             transition: transform 0.1s ease-out;
-            max-width: none;
+            max-width: 100%;
+            max-height: 100%;
             cursor: grab;
         }
         
@@ -120,21 +123,13 @@
         /* Control panel */
         .control-panel {
             position: absolute;
-            bottom: 0;
+            bottom: 20px;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 1001;
-        }
-        
-        .zoom-controls {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
+            z-index: 1001;
         }
         
         .control-btn {
@@ -155,58 +150,6 @@
             background-color: rgba(255, 255, 255, 0.5);
         }
         
-        /* Dual slider controls */
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        .slider-label {
-            color: white;
-            min-width: 40px;
-            text-align: center;
-        }
-        
-        .slider {
-            flex-grow: 1;
-            height: 6px;
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
-        }
-        
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-        }
-        
-        .slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-        }
-        
-        .horizontal-slider {
-            width: 100%;
-        }
-        
-        .vertical-slider {
-            width: 6px;
-            height: 150px;
-            writing-mode: bt-lr;
-        }
-        
         @media (max-width: 768px) {
             .portfolio-grid {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -217,57 +160,31 @@
                 height: 35px;
                 font-size: 16px;
             }
-            
-            .modal-content-container {
-                height: calc(100% - 180px);
-            }
-            
-            .control-panel {
-                padding: 10px;
-                gap: 10px;
-            }
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Advanced Photo Portfolio</h1>
-        <p>Click on any image to view with enhanced controls</p>
+        <h1>Photo Portfolio</h1>
+        <p>Click on any image to view</p>
     </header>
     
     <main class="portfolio-grid" id="portfolioContainer">
-        <!-- Thumbnails will be dynamically inserted here -->
+        <!-- Thumbnails will be inserted here -->
     </main>
     
-    <!-- Full image modal with advanced controls -->
     <div class="modal" id="imageModal">
         <span class="close">&times;</span>
         <div class="modal-content-container" id="imageContainer">
             <img class="modal-content" id="fullImage">
         </div>
         <div class="control-panel">
-            <div class="zoom-controls">
-                <button class="control-btn" id="zoomIn">+</button>
-                <button class="control-btn" id="zoomOut">-</button>
-                <button class="control-btn" id="resetZoom">↻</button>
-            </div>
-            
-            <div class="slider-container">
-                <span class="slider-label">X</span>
-                <input type="range" class="slider horizontal-slider" id="panX" min="-100" max="100" value="0">
-            </div>
-            
-            <div class="slider-container">
-                <span class="slider-label">Y</span>
-                <input type="range" class="slider horizontal-slider" id="panY" min="-100" max="100" value="0">
-            </div>
-            
-            <div class="slider-container" style="justify-content: center;">
-                <input type="range" class="slider vertical-slider" id="zoomSlider" min="10" max="500" value="100">
-            </div>
+            <button class="control-btn" id="zoomIn">+</button>
+            <button class="control-btn" id="zoomOut">-</button>
+            <button class="control-btn" id="resetZoom">↻</button>
         </div>
     </div>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // DOM elements
@@ -279,12 +196,9 @@
             const zoomInBtn = document.getElementById('zoomIn');
             const zoomOutBtn = document.getElementById('zoomOut');
             const resetZoomBtn = document.getElementById('resetZoom');
-            const zoomSlider = document.getElementById('zoomSlider');
-            const panSlider = document.getElementById('panSlider');
 
             // Sample images
-            const imageFiles = [
-                { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
+            const imageFiles = [{ thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
 { thumb: 'images/thumbs/1304_Edge.JPG', full: 'images/1304_Edge.JPG', title: '1304_Edge.JPG' },
 { thumb: 'images/thumbs/1304_Gentletouch.JPG', full: 'images/1304_Gentletouch.JPG', title: '1304_Gentletouch.JPG' },
 { thumb: 'images/thumbs/1304_Overdrive.JPG', full: 'images/1304_Overdrive.JPG', title: '1304_Overdrive.JPG' },
@@ -328,7 +242,6 @@
 { thumb: 'images/thumbs/NotRoseMoon_A.jpg', full: 'images/NotRoseMoon_A.jpg', title: 'NotRoseMoon_A.jpg' },
 { thumb: 'images/thumbs/stripes.jpg', full: 'images/stripes.jpg', title: 'stripes.jpg' },
 { thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' }
-
             ];
 
             // Transformation state
@@ -343,7 +256,6 @@
                 startY: 0,
                 initialX: 0,
                 initialY: 0,
-                maxPan: 0,
                 mouseX: 0,
                 mouseY: 0
             };
@@ -380,7 +292,6 @@
                 
                 modalImg.onload = function() {
                     centerImage();
-                    updateSliders();
                 };
             }
 
@@ -395,12 +306,6 @@
                 const scaleX = containerWidth / imgWidth;
                 const scaleY = containerHeight / imgHeight;
                 state.scale = Math.min(scaleX, scaleY, 1);
-                
-                // Calculate max pan distance
-                state.maxPan = Math.max(
-                    (imgWidth * state.maxScale - containerWidth) / 2,
-                    (imgHeight * state.maxScale - containerHeight) / 2
-                );
                 
                 // Center image
                 state.translateX = (containerWidth - imgWidth * state.scale) / 2;
@@ -424,16 +329,6 @@
                 state.translateY = 0;
                 updateTransform();
                 centerImage();
-                updateSliders();
-            }
-
-            // Update sliders
-            function updateSliders() {
-                zoomSlider.value = ((state.scale - state.minScale) / (state.maxScale - state.minScale)) * 100;
-                
-                // Calculate pan percentage (average of X and Y)
-                const panPercentage = ((state.translateX + state.translateY) / (2 * state.maxPan)) * 100;
-                panSlider.value = Math.max(-100, Math.min(100, panPercentage));
             }
 
             // Zoom to point
@@ -458,7 +353,6 @@
                 // Constrain to boundaries
                 constrainPosition();
                 updateTransform();
-                updateSliders();
             }
 
             // Pan image
@@ -467,7 +361,6 @@
                 state.translateY += deltaY;
                 constrainPosition();
                 updateTransform();
-                updateSliders();
             }
 
             // Constrain position
@@ -534,7 +427,6 @@
                 
                 constrainPosition();
                 updateTransform();
-                updateSliders();
                 e.preventDefault();
             });
 
@@ -574,7 +466,6 @@
                     
                     constrainPosition();
                     updateTransform();
-                    updateSliders();
                     e.preventDefault();
                 } else if (e.touches.length === 2) {
                     // Pinch zoom
@@ -612,21 +503,6 @@
 
             resetZoomBtn.addEventListener('click', resetTransform);
             closeBtn.addEventListener('click', () => modal.style.display = 'none');
-
-            // Sliders
-            zoomSlider.addEventListener('input', (e) => {
-                const newScale = state.minScale + (e.target.value / 100) * (state.maxScale - state.minScale);
-                const scaleFactor = newScale / state.scale;
-                zoomToPoint(scaleFactor, imageContainer.clientWidth / 2, imageContainer.clientHeight / 2);
-            });
-
-            panSlider.addEventListener('input', (e) => {
-                const panAmount = e.target.value / 100 * state.maxPan;
-                state.translateX = panAmount;
-                state.translateY = panAmount;
-                constrainPosition();
-                updateTransform();
-            });
 
             // Prevent modal close when interacting with image
             modalImg.addEventListener('click', (e) => e.stopPropagation());
