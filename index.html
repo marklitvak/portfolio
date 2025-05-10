@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photo Portfolio</title>
+    <title>Dropbox Photo Portfolio</title>
     <style>
         * {
             margin: 0;
@@ -75,7 +75,7 @@
             width: 50px;
             height: 50px;
             border: 5px solid #f3f3f3;
-            border-top: 5px solid #333;
+            border-top: 5px solid #0061ff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -101,6 +101,7 @@
         .lightbox-content {
             max-width: 90%;
             max-height: 90%;
+            position: relative;
         }
         
         .lightbox-content img {
@@ -111,8 +112,8 @@
         
         .lightbox-close {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: -40px;
+            right: 0;
             color: white;
             font-size: 30px;
             cursor: pointer;
@@ -156,44 +157,169 @@
     </div>
     
     <script>
-        // Updated image loading with error handling
+        // Configuration - Replace with your Dropbox access token and folder path
+        const DROPBOX_ACCESS_TOKEN = 'sl.u.AFt1bnCvzB_Bwzv_Wx7Xmt1h4IZmdIEDzTB1WaKQWlvuQZZbuLbU_X5KZAZRCc1FRqG-mYqlFY7PI4heNbij1PmxqmVDnJTkl4oi-Xm4LQsz9HQzZF90pLchHsfgnr7QA6u4Wk_fzUizB8WZixNc4dq-MNmpcF9_YYWHe9Skc_0vio-rUBHwAJFiTr6V0x5rNb-dgr5bQyU0BihKEAZ824REJy5D6GdpDdTVPQXACrVXa7vpCDBphHuvSnzaJSvU0M4oBZdncVikkb638eCJdYTempK5Et4ULsSOMlUIo0LQhFYSztQ5ZLL-ua3JhmL-tV6SJFqapkBnmY6soNu0YR3apdTZTEsCH0kX3zcJCV8G3lSJfTE_vNSNLULoXjQk15G80qqqV-1_AReNqbgCrXNOkFufrWmKkGBM_XvsTBTeXvDpP7xXtlgfQYYBVUo2QVFzf3aklhF3YXAOfmhymVM-nsuXymwQvaKXP0uvjgBOWi-Cb3sdaiS4tfWl4FXPhI6aFNnw345TrdVj0zVeuludcwo2kA-xxsz2tZsfbPDaelpnJNEI6vgt5cukqbloKZ7ajqLYZGNebw2LuAPCkdhopoQeE1OBxfLojj81VK4PBX7e6VCz73RU41k13gkHRW0Ag9MDmpcC8ycP9VcP3NiU1elK098IoA3b3YGy4CE8w-Z3jvPI4MhVGPGsz2zWIKtZVI8zlcGWg-YpjHahMer2nThlvy_c02ANJnbRS2Wg8cCodg6PnGYDiHshqiUe3SwG6-24QMmA-L2jjbXWzMb6giQb_f47I3qiBz37LE4LDJZpbz_Y6LzrZ-ruTnqmXx_rJnIGqZR0hcyPIrvykI5_VEymjm7HgWwgc5I8x8i1inqjHCuYGlsf8KOvbdxDCtTEsnYQU2kP_OLhSK0pvkfUnqWU_gowIGHiWUZvCDLN_wnPuFeMn3F6qx3rnhRYl99XFaSLH9fYKe-QwA82v9IqLibpnyogiIBolt-o4NK0Lr2tqXskSHPbJJXFeVSFdZDv5yBUnNNeCeXOz_ejqX4C0FQuWT7y_72IfCPSqq3cqSb8wEeHtYHd9v_fb2-HwxK3lK2Np5SAj6RYG3Kc3hl27iF1b9E9T1UOP0I-sBAi1oWVB7SxjkLIxnfNtZ_Eewrk3LUBSJXxjOrHZeCofBtvWu-7UicFmcslX-vUp4TFuI3CxR8M0LNAF9FuJJ9HB_pqQMp874dcktgU_zwNZ-iyUqJ87D9ztto7qfwZSQcqtT_Us6K4mC2_LStDc9wmvqDsSHX15n5DwyxZ0LN36Yfvxv_IlDzp6MyFbG5B_QxUanFkxmijgE9tSlQaRjn8n5s1nXlA_kB3zX6LcJ3ScJyqxuDrjOpVm1z070G-KfHNu1TEfGRP4z_hFh4hPRH3_rJEtsOt1oiTQGDwe1vCGJci';
+        const DROPBOX_FOLDER_PATH = '/portfolio'; // Change to your folder path
+        
+        // Convert Dropbox file URL to direct download link
+        function getDirectDownloadLink(dropboxLink) {
+            // Replace 'www.dropbox.com' with 'dl.dropboxusercontent.com'
+            return dropboxLink.replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                              .replace('?dl=0', '');
+        }
+        
+        // Get thumbnail URL (smaller version for faster loading)
+        function getThumbnailUrl(dropboxLink) {
+            const directLink = getDirectDownloadLink(dropboxLink);
+            // For JPG/JPEG images, we can use Dropbox's thumbnail API
+            if (directLink.toLowerCase().endsWith('.jpg') || directLink.toLowerCase().endsWith('.jpeg')) {
+                return `https://thumbnail-dropbox.herokuapp.com/?url=${encodeURIComponent(directLink)}&size=800x600`;
+            }
+            return directLink;
+        }
+        
+        // Load photos from Dropbox
         async function loadPhotos() {
             try {
-                const response = await fetch('https://drive.google.com/drive/folders/1CnY1yvKXX9LQf9fytznuKyAS-FiD9BMT?usp=drive_link');
-                if (!response.ok) throw new Error('Network response was not ok');
+                // First show loading indicator
+                document.querySelector('.loading').style.display = 'flex';
                 
-                const photos = await response.json();
+                // List files in Dropbox folder
+                const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: DROPBOX_FOLDER_PATH,
+                        recursive: false,
+                        include_media_info: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Dropbox API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
                 const gallery = document.getElementById('gallery');
                 
-                if (!photos.length) {
-                    gallery.innerHTML = '<p>No photos found in the specified folder.</p>';
+                if (!data.entries || data.entries.length === 0) {
+                    gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px;">No photos found in the specified folder.</p>';
                     return;
                 }
                 
+                // Filter for image files only
+                const imageFiles = data.entries.filter(entry => 
+                    entry['.tag'] === 'file' && 
+                    entry.path_lower.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+                );
+                
+                if (imageFiles.length === 0) {
+                    gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px;">Folder contains no image files.</p>';
+                    return;
+                }
+                
+                // Get shared links for each image
+                const photos = await Promise.all(imageFiles.map(async (file) => {
+                    const linkResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            path: file.path_lower,
+                            settings: {
+                                requested_visibility: 'public'
+                            }
+                        })
+                    });
+                    
+                    const linkData = await linkResponse.json();
+                    return {
+                        name: file.name,
+                        url: linkData.url,
+                        thumbnail: getThumbnailUrl(linkData.url),
+                        lastModified: file.server_modified
+                    };
+                }));
+                
+                // Sort by last modified date (newest first)
+                photos.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+                
+                // Display photos in gallery
                 gallery.innerHTML = photos.map(photo => `
-                    <div class="photo" onclick="showLightbox('${photo.url}')">
+                    <div class="photo">
                         <img src="${photo.thumbnail}" 
                              alt="${photo.name}" 
                              loading="lazy"
+                             data-fullres="${photo.url}"
                              onerror="this.onerror=null;this.src='placeholder.jpg'">
                     </div>
                 `).join('');
                 
+                // Add click events to all photos
+                document.querySelectorAll('.photo').forEach(photo => {
+                    photo.addEventListener('click', () => {
+                        const fullResUrl = photo.querySelector('img').dataset.fullres;
+                        showLightbox(fullResUrl);
+                    });
+                });
+                
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error loading photos:', error);
                 document.getElementById('gallery').innerHTML = `
-                    <p>Error loading photos. Please check:</p>
-                    <ul>
-                        <li>Google Drive folder is shared publicly</li>
-                        <li>Web app URL is correct</li>
-                        <li>Folder contains image files</li>
-                    </ul>
-                `;
+                    <p style="grid-column:1/-1;text-align:center;padding:40px;">
+                        Error loading photos: ${error.message}<br>
+                        Please check your Dropbox access token and folder path.
+                    </p>`;
             } finally {
                 document.querySelector('.loading').style.display = 'none';
             }
         }
         
+        // Lightbox functions
+        function showLightbox(dropboxUrl) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-image');
+            const loadingText = document.querySelector('.lightbox-loading');
+            
+            lightbox.classList.add('active');
+            lightboxImg.style.display = 'none';
+            loadingText.style.display = 'block';
+            
+            // Convert Dropbox shared link to direct download link
+            const directUrl = getDirectDownloadLink(dropboxUrl);
+            
+            // Load full resolution image
+            lightboxImg.onload = function() {
+                loadingText.style.display = 'none';
+                lightboxImg.style.display = 'block';
+            };
+            
+            lightboxImg.src = directUrl;
+        }
+        
+        function hideLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+        
+        // Close lightbox when clicking X or backdrop
+        document.querySelector('.lightbox-close').addEventListener('click', hideLightbox);
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) hideLightbox();
+        });
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!DROPBOX_ACCESS_TOKEN || DROPBOX_ACCESS_TOKEN === 'sl.u.AFt1bnCvzB_Bwzv_Wx7Xmt1h4IZmdIEDzTB1WaKQWlvuQZZbuLbU_X5KZAZRCc1FRqG-mYqlFY7PI4heNbij1PmxqmVDnJTkl4oi-Xm4LQsz9HQzZF90pLchHsfgnr7QA6u4Wk_fzUizB8WZixNc4dq-MNmpcF9_YYWHe9Skc_0vio-rUBHwAJFiTr6V0x5rNb-dgr5bQyU0BihKEAZ824REJy5D6GdpDdTVPQXACrVXa7vpCDBphHuvSnzaJSvU0M4oBZdncVikkb638eCJdYTempK5Et4ULsSOMlUIo0LQhFYSztQ5ZLL-ua3JhmL-tV6SJFqapkBnmY6soNu0YR3apdTZTEsCH0kX3zcJCV8G3lSJfTE_vNSNLULoXjQk15G80qqqV-1_AReNqbgCrXNOkFufrWmKkGBM_XvsTBTeXvDpP7xXtlgfQYYBVUo2QVFzf3aklhF3YXAOfmhymVM-nsuXymwQvaKXP0uvjgBOWi-Cb3sdaiS4tfWl4FXPhI6aFNnw345TrdVj0zVeuludcwo2kA-xxsz2tZsfbPDaelpnJNEI6vgt5cukqbloKZ7ajqLYZGNebw2LuAPCkdhopoQeE1OBxfLojj81VK4PBX7e6VCz73RU41k13gkHRW0Ag9MDmpcC8ycP9VcP3NiU1elK098IoA3b3YGy4CE8w-Z3jvPI4MhVGPGsz2zWIKtZVI8zlcGWg-YpjHahMer2nThlvy_c02ANJnbRS2Wg8cCodg6PnGYDiHshqiUe3SwG6-24QMmA-L2jjbXWzMb6giQb_f47I3qiBz37LE4LDJZpbz_Y6LzrZ-ruTnqmXx_rJnIGqZR0hcyPIrvykI5_VEymjm7HgWwgc5I8x8i1inqjHCuYGlsf8KOvbdxDCtTEsnYQU2kP_OLhSK0pvkfUnqWU_gowIGHiWUZvCDLN_wnPuFeMn3F6qx3rnhRYl99XFaSLH9fYKe-QwA82v9IqLibpnyogiIBolt-o4NK0Lr2tqXskSHPbJJXFeVSFdZDv5yBUnNNeCeXOz_ejqX4C0FQuWT7y_72IfCPSqq3cqSb8wEeHtYHd9v_fb2-HwxK3lK2Np5SAj6RYG3Kc3hl27iF1b9E9T1UOP0I-sBAi1oWVB7SxjkLIxnfNtZ_Eewrk3LUBSJXxjOrHZeCofBtvWu-7UicFmcslX-vUp4TFuI3CxR8M0LNAF9FuJJ9HB_pqQMp874dcktgU_zwNZ-iyUqJ87D9ztto7qfwZSQcqtT_Us6K4mC2_LStDc9wmvqDsSHX15n5DwyxZ0LN36Yfvxv_IlDzp6MyFbG5B_QxUanFkxmijgE9tSlQaRjn8n5s1nXlA_kB3zX6LcJ3ScJyqxuDrjOpVm1z070G-KfHNu1TEfGRP4z_hFh4hPRH3_rJEtsOt1oiTQGDwe1vCGJci') {
+                alert('Please set your Dropbox access token in the JavaScript code');
+                return;
+            }
+            loadPhotos();
+        });
     </script>
 </body>
 </html>
