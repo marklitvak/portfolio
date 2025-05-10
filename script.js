@@ -9,14 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const imageFolder = 'images/';
     
     // Array of image filenames (or you could fetch them dynamically from the server)
-    const imageFiles = [
-        'photo1.jpg',
-        'photo2.jpg',
-        'photo3.jpg',
-        'photo4.jpg',
-        'photo5.jpg',
-        'photo6.jpg'
-    ];
+    const imageFiles = ['1304_Bulbs.JPG', '1304_Edge.JPG', '1304_Gentletouch.JPG', '1304_Overdrive.JPG', '1304_Skynet.JPG', 'blue_window.jpg', 'bottle.jpg', 'guard1.jpg', 'guard2.jpg', 'guard3.jpg', 'IMG_0021.jpg', 'IMG_0022.jpg', 'IMG_0023.JPG', 'IMG_0109_full.jpg', 'IMG_0110.jpg', 'IMG_0116.jpg', 'IMG_0143.jpg', 'IMG_0146.JPG', 'IMG_0150.JPG', 'IMG_0155.JPG', 'IMG_0175.jpg', 'IMG_0176.JPG', 'IMG_0187.JPG', 'IMG_0200.JPG', 'IMG_0231 - Copy.JPG', 'IMG_0233.jpg', 'IMG_0234.JPG', 'IMG_0244.JPG', 'IMG_0245.jpg', 'IMG_0251.JPG', 'IMG_0257.jpg', 'IMG_0271.JPG', 'IMG_0350_final.jpg', 'IMG_0448.jpg', 'IMG_0462.jpg', 'IMG_0482.jpg', 'IMG_0488.jpg', 'IMG_0496.jpg', 'IMG_0498.jpg', 'IMG_0506.jpg', 'IMG_20250505_152743.jpg', 'NotRoseMoon_A.jpg', 'parcer.py', 'stripes.jpg', 'teabag_dream.jpg'];
     
     // Function to create thumbnail elements
     function createThumbnails() {
