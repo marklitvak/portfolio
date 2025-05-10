@@ -279,11 +279,10 @@
             const zoomInBtn = document.getElementById('zoomIn');
             const zoomOutBtn = document.getElementById('zoomOut');
             const resetZoomBtn = document.getElementById('resetZoom');
-            const panXSlider = document.getElementById('panX');
-            const panYSlider = document.getElementById('panY');
             const zoomSlider = document.getElementById('zoomSlider');
+            const panSlider = document.getElementById('panSlider');
 
-            // Sample image data
+            // Sample images
             const imageFiles = [
                 { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
 { thumb: 'images/thumbs/1304_Edge.JPG', full: 'images/1304_Edge.JPG', title: '1304_Edge.JPG' },
@@ -328,7 +327,7 @@
 { thumb: 'images/thumbs/IMG_20250505_152743.jpg', full: 'images/IMG_20250505_152743.jpg', title: 'IMG_20250505_152743.jpg' },
 { thumb: 'images/thumbs/NotRoseMoon_A.jpg', full: 'images/NotRoseMoon_A.jpg', title: 'NotRoseMoon_A.jpg' },
 { thumb: 'images/thumbs/stripes.jpg', full: 'images/stripes.jpg', title: 'stripes.jpg' },
-{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' },
+{ thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' }
 
             ];
 
@@ -344,8 +343,9 @@
                 startY: 0,
                 initialX: 0,
                 initialY: 0,
-                maxPanX: 0,
-                maxPanY: 0
+                maxPan: 0,
+                mouseX: 0,
+                mouseY: 0
             };
 
             // Create thumbnails
@@ -384,31 +384,32 @@
                 };
             }
 
-            // Center image in viewport
+            // Center image
             function centerImage() {
                 const containerWidth = imageContainer.clientWidth;
                 const containerHeight = imageContainer.clientHeight;
                 const imgWidth = modalImg.naturalWidth;
                 const imgHeight = modalImg.naturalHeight;
                 
-                // Calculate initial scale to fit image
+                // Calculate initial scale
                 const scaleX = containerWidth / imgWidth;
                 const scaleY = containerHeight / imgHeight;
                 state.scale = Math.min(scaleX, scaleY, 1);
                 
-                // Calculate maximum pan values
-                state.maxPanX = Math.max(0, (imgWidth * state.scale - containerWidth) / 2);
-                state.maxPanY = Math.max(0, (imgHeight * state.scale - containerHeight) / 2);
+                // Calculate max pan distance
+                state.maxPan = Math.max(
+                    (imgWidth * state.maxScale - containerWidth) / 2,
+                    (imgHeight * state.maxScale - containerHeight) / 2
+                );
                 
-                // Center the image
+                // Center image
                 state.translateX = (containerWidth - imgWidth * state.scale) / 2;
                 state.translateY = (containerHeight - imgHeight * state.scale) / 2;
                 
                 updateTransform();
-                updateSliders();
             }
 
-            // Update CSS transform
+            // Update transform
             function updateTransform() {
                 modalImg.style.transform = `
                     translate(${state.translateX}px, ${state.translateY}px)
@@ -416,83 +417,100 @@
                 `;
             }
 
-            // Update slider positions
-            function updateSliders() {
-                if (state.maxPanX > 0) {
-                    panXSlider.value = ((state.translateX - (imageContainer.clientWidth - modalImg.naturalWidth * state.scale) / 2) / state.maxPanX) * 100;
-                } else {
-                    panXSlider.value = 0;
-                }
-                
-                if (state.maxPanY > 0) {
-                    panYSlider.value = ((state.translateY - (imageContainer.clientHeight - modalImg.naturalHeight * state.scale) / 2) / state.maxPanY) * 100;
-                } else {
-                    panYSlider.value = 0;
-                }
-                
-                zoomSlider.value = ((state.scale - state.minScale) / (state.maxScale - state.minScale)) * 100;
-            }
-
-            // Reset all transformations
+            // Reset transform
             function resetTransform() {
                 state.scale = 1;
                 state.translateX = 0;
                 state.translateY = 0;
                 updateTransform();
                 centerImage();
+                updateSliders();
             }
 
-            // Zoom functions
-            function zoom(zoomFactor, centerX, centerY) {
+            // Update sliders
+            function updateSliders() {
+                zoomSlider.value = ((state.scale - state.minScale) / (state.maxScale - state.minScale)) * 100;
+                
+                // Calculate pan percentage (average of X and Y)
+                const panPercentage = ((state.translateX + state.translateY) / (2 * state.maxPan)) * 100;
+                panSlider.value = Math.max(-100, Math.min(100, panPercentage));
+            }
+
+            // Zoom to point
+            function zoomToPoint(scaleFactor, clientX, clientY) {
                 const prevScale = state.scale;
-                state.scale *= zoomFactor;
+                state.scale *= scaleFactor;
                 state.scale = Math.max(state.minScale, Math.min(state.scale, state.maxScale));
                 
-                // Calculate maximum pan values
-                const containerWidth = imageContainer.clientWidth;
-                const containerHeight = imageContainer.clientHeight;
-                state.maxPanX = Math.max(0, (modalImg.naturalWidth * state.scale - containerWidth) / 2);
-                state.maxPanY = Math.max(0, (modalImg.naturalHeight * state.scale - containerHeight) / 2);
+                // Get container position
+                const rect = imageContainer.getBoundingClientRect();
+                const containerX = rect.left;
+                const containerY = rect.top;
+                
+                // Calculate mouse position relative to container
+                const mouseX = clientX - containerX;
+                const mouseY = clientY - containerY;
                 
                 // Adjust position to zoom toward the point
-                if (centerX && centerY) {
-                    const containerRect = imageContainer.getBoundingClientRect();
-                    const relativeX = centerX - containerRect.left;
-                    const relativeY = centerY - containerRect.top;
-                    
-                    state.translateX = relativeX - (relativeX - state.translateX) * (state.scale / prevScale);
-                    state.translateY = relativeY - (relativeY - state.translateY) * (state.scale / prevScale);
-                }
+                state.translateX = mouseX - (mouseX - state.translateX) * (state.scale / prevScale);
+                state.translateY = mouseY - (mouseY - state.translateY) * (state.scale / prevScale);
                 
                 // Constrain to boundaries
-                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2;
-                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2;
-                
-                state.translateX = Math.max(minX - state.maxPanX, Math.min(minX + state.maxPanX, state.translateX));
-                state.translateY = Math.max(minY - state.maxPanY, Math.min(minY + state.maxPanY, state.translateY));
-                
+                constrainPosition();
                 updateTransform();
                 updateSliders();
             }
 
-            // Pan functions
-            function pan(deltaX, deltaY) {
+            // Pan image
+            function panImage(deltaX, deltaY) {
+                state.translateX += deltaX;
+                state.translateY += deltaY;
+                constrainPosition();
+                updateTransform();
+                updateSliders();
+            }
+
+            // Constrain position
+            function constrainPosition() {
                 const containerWidth = imageContainer.clientWidth;
                 const containerHeight = imageContainer.clientHeight;
+                const imgWidth = modalImg.naturalWidth * state.scale;
+                const imgHeight = modalImg.naturalHeight * state.scale;
                 
-                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2 - state.maxPanX;
-                const maxX = (containerWidth - modalImg.naturalWidth * state.scale) / 2 + state.maxPanX;
-                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2 - state.maxPanY;
-                const maxY = (containerHeight - modalImg.naturalHeight * state.scale) / 2 + state.maxPanY;
+                const maxTranslateX = Math.max(0, (imgWidth - containerWidth) / 2);
+                const maxTranslateY = Math.max(0, (imgHeight - containerHeight) / 2);
                 
-                state.translateX = Math.max(minX, Math.min(maxX, state.translateX + deltaX));
-                state.translateY = Math.max(minY, Math.min(maxY, state.translateY + deltaY));
+                state.translateX = Math.max(
+                    (containerWidth - imgWidth) / 2,
+                    Math.min(
+                        (containerWidth + imgWidth) / 2 - containerWidth,
+                        state.translateX
+                    )
+                );
                 
-                updateTransform();
-                updateSliders();
+                state.translateY = Math.max(
+                    (containerHeight - imgHeight) / 2,
+                    Math.min(
+                        (containerHeight + imgHeight) / 2 - containerHeight,
+                        state.translateY
+                    )
+                );
             }
 
-            // Mouse event handlers
+            // Track mouse position
+            imageContainer.addEventListener('mousemove', (e) => {
+                state.mouseX = e.clientX;
+                state.mouseY = e.clientY;
+            });
+
+            // Mouse wheel zoom
+            imageContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                zoomToPoint(zoomFactor, e.clientX, e.clientY);
+            });
+
+            // Mouse drag to pan
             modalImg.addEventListener('mousedown', (e) => {
                 if (state.scale <= 1) return;
                 
@@ -511,9 +529,12 @@
                 const dx = e.clientX - state.startX;
                 const dy = e.clientY - state.startY;
                 
-                pan(dx, dy);
-                state.startX = e.clientX;
-                state.startY = e.clientY;
+                state.translateX = state.initialX + dx;
+                state.translateY = state.initialY + dy;
+                
+                constrainPosition();
+                updateTransform();
+                updateSliders();
                 e.preventDefault();
             });
 
@@ -522,92 +543,88 @@
                 modalImg.classList.remove('grabbing');
             });
 
-            // Touch event handlers
+            // Touch events
             modalImg.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1 && state.scale > 1) {
+                if (e.touches.length === 1) {
+                    if (state.scale <= 1) return;
+                    
                     state.isDragging = true;
                     state.startX = e.touches[0].clientX;
                     state.startY = e.touches[0].clientY;
                     state.initialX = state.translateX;
                     state.initialY = state.translateY;
                     e.preventDefault();
+                } else if (e.touches.length === 2) {
+                    // Pinch zoom
+                    initialDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    e.preventDefault();
                 }
             });
 
             window.addEventListener('touchmove', (e) => {
-                if (state.isDragging && e.touches.length === 1) {
+                if (e.touches.length === 1 && state.isDragging) {
                     const dx = e.touches[0].clientX - state.startX;
                     const dy = e.touches[0].clientY - state.startY;
                     
-                    pan(dx, dy);
-                    state.startX = e.touches[0].clientX;
-                    state.startY = e.touches[0].clientY;
+                    state.translateX = state.initialX + dx;
+                    state.translateY = state.initialY + dy;
+                    
+                    constrainPosition();
+                    updateTransform();
+                    updateSliders();
+                    e.preventDefault();
+                } else if (e.touches.length === 2) {
+                    // Pinch zoom
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const currentDistance = Math.hypot(
+                        touch1.clientX - touch2.clientX,
+                        touch1.clientY - touch2.clientY
+                    );
+                    
+                    if (initialDistance) {
+                        const centerX = (touch1.clientX + touch2.clientX) / 2;
+                        const centerY = (touch1.clientY + touch2.clientY) / 2;
+                        const zoomFactor = currentDistance / initialDistance;
+                        zoomToPoint(zoomFactor, centerX, centerY);
+                    }
+                    initialDistance = currentDistance;
                     e.preventDefault();
                 }
             });
 
             window.addEventListener('touchend', () => {
                 state.isDragging = false;
+                initialDistance = null;
             });
 
-            // Wheel zoom
-            imageContainer.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const rect = imageContainer.getBoundingClientRect();
-                const centerX = e.clientX - rect.left;
-                const centerY = e.clientY - rect.top;
-                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                zoom(zoomFactor, centerX + rect.left, centerY + rect.top);
-            });
-
-            // Control button handlers
+            // Control buttons
             zoomInBtn.addEventListener('click', () => {
-                const rect = imageContainer.getBoundingClientRect();
-                zoom(1.2, rect.left + rect.width/2, rect.top + rect.height/2);
+                zoomToPoint(1.2, state.mouseX, state.mouseY);
             });
 
             zoomOutBtn.addEventListener('click', () => {
-                const rect = imageContainer.getBoundingClientRect();
-                zoom(1/1.2, rect.left + rect.width/2, rect.top + rect.height/2);
+                zoomToPoint(1/1.2, state.mouseX, state.mouseY);
             });
 
             resetZoomBtn.addEventListener('click', resetTransform);
             closeBtn.addEventListener('click', () => modal.style.display = 'none');
 
-            // Slider handlers
-            panXSlider.addEventListener('input', (e) => {
-                const containerWidth = imageContainer.clientWidth;
-                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2;
-                state.translateX = minX + (e.target.value / 100) * state.maxPanX;
-                updateTransform();
-            });
-
-            panYSlider.addEventListener('input', (e) => {
-                const containerHeight = imageContainer.clientHeight;
-                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2;
-                state.translateY = minY + (e.target.value / 100) * state.maxPanY;
-                updateTransform();
-            });
-
+            // Sliders
             zoomSlider.addEventListener('input', (e) => {
-                state.scale = state.minScale + (e.target.value / 100) * (state.maxScale - state.minScale);
-                
-                // Calculate maximum pan values
-                const containerWidth = imageContainer.clientWidth;
-                const containerHeight = imageContainer.clientHeight;
-                state.maxPanX = Math.max(0, (modalImg.naturalWidth * state.scale - containerWidth) / 2);
-                state.maxPanY = Math.max(0, (modalImg.naturalHeight * state.scale - containerHeight) / 2);
-                
-                // Keep current pan percentage
-                const currentPanX = panXSlider.value;
-                const currentPanY = panYSlider.value;
-                
-                const minX = (containerWidth - modalImg.naturalWidth * state.scale) / 2;
-                const minY = (containerHeight - modalImg.naturalHeight * state.scale) / 2;
-                
-                state.translateX = minX + (currentPanX / 100) * state.maxPanX;
-                state.translateY = minY + (currentPanY / 100) * state.maxPanY;
-                
+                const newScale = state.minScale + (e.target.value / 100) * (state.maxScale - state.minScale);
+                const scaleFactor = newScale / state.scale;
+                zoomToPoint(scaleFactor, imageContainer.clientWidth / 2, imageContainer.clientHeight / 2);
+            });
+
+            panSlider.addEventListener('input', (e) => {
+                const panAmount = e.target.value / 100 * state.maxPan;
+                state.translateX = panAmount;
+                state.translateY = panAmount;
+                constrainPosition();
                 updateTransform();
             });
 
