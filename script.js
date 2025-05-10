@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Image data - replace with your actual images
     const imageFiles = [
-{ thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
+        { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
 { thumb: 'images/thumbs/1304_Edge.JPG', full: 'images/1304_Edge.JPG', title: '1304_Edge.JPG' },
 { thumb: 'images/thumbs/1304_Gentletouch.JPG', full: 'images/1304_Gentletouch.JPG', title: '1304_Gentletouch.JPG' },
 { thumb: 'images/thumbs/1304_Overdrive.JPG', full: 'images/1304_Overdrive.JPG', title: '1304_Overdrive.JPG' },
@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
 { thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' },
 { thumb: 'images/thumbs/thumb_creator.py', full: 'images/thumb_creator.py', title: 'thumb_creator.py' }
     ];
+    ];
     
     // Zoom and pan variables
     let scale = 1;
@@ -64,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let posY = 0;
     let isDragging = false;
     let startX, startY, initialX, initialY;
+    let initialDistance = null;
     
     // Create thumbnails
     function createThumbnails() {
@@ -111,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculate initial scale to fit image to container
         const scaleX = containerWidth / imgWidth;
         const scaleY = containerHeight / imgHeight;
-        scale = Math.min(scaleX, scaleY);
+        scale = Math.min(scaleX, scaleY, 1); // Never scale up beyond 1 initially
         
         // Center the image
         posX = (containerWidth - imgWidth * scale) / 2;
@@ -136,13 +138,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Zoom in/out functions
     function zoomIn() {
+        const prevScale = scale;
         scale *= 1.2;
+        
+        // Adjust position to zoom toward center
+        const containerWidth = imageContainer.clientWidth;
+        const containerHeight = imageContainer.clientHeight;
+        posX = posX - (containerWidth/2 - posX) * (1.2 - 1);
+        posY = posY - (containerHeight/2 - posY) * (1.2 - 1);
+        
         updateTransform();
     }
     
     function zoomOut() {
+        const prevScale = scale;
         scale /= 1.2;
         if (scale < 0.1) scale = 0.1;
+        
+        // Adjust position to zoom toward center
+        const containerWidth = imageContainer.clientWidth;
+        const containerHeight = imageContainer.clientHeight;
+        posX = posX - (containerWidth/2 - posX) * (1/1.2 - 1);
+        posY = posY - (containerHeight/2 - posY) * (1/1.2 - 1);
+        
         updateTransform();
     }
     
@@ -151,17 +169,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (scale <= 1) return;
         
         isDragging = true;
-        startX = e.clientX - posX;
-        startY = e.clientY - posY;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialX = posX;
+        initialY = posY;
         imageContainer.style.cursor = 'grabbing';
+        e.preventDefault();
     });
     
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
-        posX = e.clientX - startX;
-        posY = e.clientY - startY;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        posX = initialX + dx;
+        posY = initialY + dy;
+        
         updateTransform();
+        e.preventDefault();
     });
     
     window.addEventListener('mouseup', () => {
@@ -169,43 +195,41 @@ document.addEventListener('DOMContentLoaded', function() {
         imageContainer.style.cursor = 'grab';
     });
     
-    // Touch event handlers for mobile
+    // Touch event handlers
     imageContainer.addEventListener('touchstart', (e) => {
-        if (scale <= 1 || e.touches.length !== 1) return;
-        
-        isDragging = true;
-        startX = e.touches[0].clientX - posX;
-        startY = e.touches[0].clientY - posY;
-        e.preventDefault();
-    });
-    
-    window.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        
-        posX = e.touches[0].clientX - startX;
-        posY = e.touches[0].clientY - startY;
-        updateTransform();
-        e.preventDefault();
-    });
-    
-    window.addEventListener('touchend', () => {
-        isDragging = false;
-    });
-    
-    // Pinch zoom for touch devices
-    let initialDistance = null;
-    
-    imageContainer.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
+        if (e.touches.length === 1) {
+            // Single touch - pan
+            if (scale <= 1) return;
+            
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            initialX = posX;
+            initialY = posY;
+            e.preventDefault();
+        } else if (e.touches.length === 2) {
+            // Two touches - pinch zoom
             initialDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
+            e.preventDefault();
         }
     });
     
-    imageContainer.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && isDragging) {
+            // Single touch - pan
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            
+            posX = initialX + dx;
+            posY = initialY + dy;
+            
+            updateTransform();
+            e.preventDefault();
+        } else if (e.touches.length === 2) {
+            // Two touches - pinch zoom
             const currentDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
@@ -223,6 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    window.addEventListener('touchend', () => {
+        isDragging = false;
+        initialDistance = null;
+    });
+    
     // Button event listeners
     zoomInBtn.addEventListener('click', zoomIn);
     zoomOutBtn.addEventListener('click', zoomOut);
@@ -237,6 +266,9 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.style.display = 'none';
         }
     });
+    
+    // Initialize cursor style
+    imageContainer.style.cursor = 'grab';
     
     // Initialize the portfolio
     createThumbnails();
