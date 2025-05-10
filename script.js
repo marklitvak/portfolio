@@ -8,8 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetZoomBtn = document.getElementById('resetZoom');
 
     // Image data - replace with your actual images
-    const imageFiles = [
-        { thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
+    const imageFiles = [{ thumb: 'images/thumbs/1304_Bulbs.JPG', full: 'images/1304_Bulbs.JPG', title: '1304_Bulbs.JPG' },
 { thumb: 'images/thumbs/1304_Edge.JPG', full: 'images/1304_Edge.JPG', title: '1304_Edge.JPG' },
 { thumb: 'images/thumbs/1304_Gentletouch.JPG', full: 'images/1304_Gentletouch.JPG', title: '1304_Gentletouch.JPG' },
 { thumb: 'images/thumbs/1304_Overdrive.JPG', full: 'images/1304_Overdrive.JPG', title: '1304_Overdrive.JPG' },
@@ -54,8 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
 { thumb: 'images/thumbs/parcer.py', full: 'images/parcer.py', title: 'parcer.py' },
 { thumb: 'images/thumbs/stripes.jpg', full: 'images/stripes.jpg', title: 'stripes.jpg' },
 { thumb: 'images/thumbs/teabag_dream.jpg', full: 'images/teabag_dream.jpg', title: 'teabag_dream.jpg' },
-{ thumb: 'images/thumbs/thumb_creator.py', full: 'images/thumb_creator.py', title: 'thumb_creator.py' }
-    ];
+{ thumb: 'images/thumbs/thumb_creator.py', full: 'images/thumb_creator.py', title: 'thumb_creator.py' }];
 
     // Zoom and pan variables
     let scale = 1;
